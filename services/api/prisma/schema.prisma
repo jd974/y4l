@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  CREATOR
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  streamKey    String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  isLive Boolean @default(false)
+streams       Stream[]
+  messagesSent  Message[] @relation("SentMessages")
+  messagesRecv  Message[] @relation("RecvMessages")
+  battleSideA   Battle[]  @relation("BattleA")
+  battleSideB   Battle[]  @relation("BattleB")
+}
+
+model Stream {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  title      String   @default("Live")
+  isLive     Boolean  @default(false)
+  startedAt  DateTime?
+  endedAt    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  
+  @@index([isLive])
+  
+}
+
+model Thread {
+  id        String   @id @default(cuid())
+  aId       String
+  bId       String
+  createdAt DateTime @default(now())
+
+  messages  ThreadMessage[]
+
+  @@unique([aId, bId])
+}
+
+model ThreadMessage {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id])
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  from      User     @relation("SentMessages", fields: [fromId], references: [id])
+  to        User     @relation("RecvMessages", fields: [toId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+}
+
+model Battle {
+  id        String   @id @default(cuid())
+  roomKey   String   @unique
+  aUserId   String
+  bUserId   String
+  aUser     User     @relation("BattleA", fields: [aUserId], references: [id])
+  bUser     User     @relation("BattleB", fields: [bUserId], references: [id])
+  aScore    Int      @default(0)
+  bScore    Int      @default(0)
+  isActive  Boolean  @default(true)
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+}
+
+model LiveStream {
+  id        String   @id @default(cuid())
+  streamKey String   @unique
+  isLive    Boolean  @default(false)
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
